@@ -2,36 +2,35 @@
 AI Learning Tutor - Phase 1 (Working Chat) + Phase 2 Stubs
 ============================================================
 This app lets you chat with an AI tutor that teaches you how to code
-and how to learn effectively.
+and how to learn effectively. Uses Groq (free) to run Llama 3.
 
 HOW IT WORKS (big picture):
 1. You type a message in the chat box at the bottom
 2. Your message gets added to a list called `messages`
-3. We send the ENTIRE messages list to Claude (so it remembers the conversation)
-4. Claude replies, we add that to messages too
+3. We send the ENTIRE messages list to the AI (so it remembers the conversation)
+4. The AI replies, we add that to messages too
 5. Streamlit redraws the screen showing all messages
 """
 
-import os  # Read environment variables (like your API key)
-import anthropic  # The official Anthropic Python library
-import streamlit as st  # Turns Python scripts into web apps
-from dotenv import load_dotenv  # Loads variables from your .env file
+import os
+import streamlit as st
+from groq import Groq
+from dotenv import load_dotenv
 
 
 # ─── SETUP ───────────────────────────────────────────────────────────────────
 
-# Load ANTHROPIC_API_KEY from .env file into the environment
 load_dotenv()
 
-# Create the Anthropic client — this is your connection to Claude
-# It automatically reads ANTHROPIC_API_KEY from the environment
-client = anthropic.Anthropic()
+# Create the Groq client — reads GROQ_API_KEY from environment
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# The model we're using — Llama 3.3 70B is free on Groq and very capable
+MODEL = "llama-3.3-70b-versatile"
 
 
 # ─── SYSTEM PROMPT ───────────────────────────────────────────────────────────
-# The system prompt is a special instruction that tells Claude HOW to behave.
-# It's sent with every message but the user never sees it.
-# We make it long on purpose — prompt caching needs ~1024+ tokens to activate.
+# Tells the AI how to behave. Sent with every message but the user never sees it.
 
 SYSTEM_PROMPT = """
 You are a patient, encouraging, and skilled coding tutor named Sage. Your mission is to
@@ -76,7 +75,6 @@ help complete beginners learn two things simultaneously:
 - Text-based games (guess the number, hangman)
 - Simple calculators
 - To-do list apps
-- Web scraping basics
 - Building chatbots (like this one!)
 
 ## Conversation Guidelines
@@ -97,18 +95,6 @@ eventually answer their own questions. Every interaction should leave them more
 capable and more confident than before.
 """
 
-# Prompt caching: wrapping the system prompt in a list with cache_control
-# tells Anthropic to cache this text after the first request.
-# Result: ~90% cheaper on repeated calls (the cached part isn't re-processed).
-# Note: caching activates only when the prompt is 1024+ tokens — ours qualifies!
-SYSTEM = [
-    {
-        "type": "text",
-        "text": SYSTEM_PROMPT,
-        "cache_control": {"type": "ephemeral"},  # "ephemeral" = cache for ~5 minutes
-    }
-]
-
 
 # ─── PAGE CONFIG ─────────────────────────────────────────────────────────────
 
@@ -128,59 +114,25 @@ st.caption("Your patient guide to coding and learning how to learn")
 # keep track of the conversation history across multiple messages.
 
 if "messages" not in st.session_state:
-    # First time the app loads — start with an empty conversation
     st.session_state.messages = []
-
-# Also track token usage so you can see caching in action
-if "total_input_tokens" not in st.session_state:
-    st.session_state.total_input_tokens = 0
-if "total_cache_read_tokens" not in st.session_state:
-    st.session_state.total_cache_read_tokens = 0
 
 
 # ─── DISPLAY EXISTING MESSAGES ───────────────────────────────────────────────
-# Loop through every message in history and render it in the chat UI.
-# `role` is either "user" (you) or "assistant" (Claude/Sage).
 
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):  # Creates a chat bubble with the right avatar
-        st.markdown(msg["content"])    # Renders markdown formatting in replies
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
 
 # ─── PHASE 2 TOOL STUBS ──────────────────────────────────────────────────────
-# These functions are PLACEHOLDERS for Phase 2 (agentic tool use).
-# In Phase 2, Claude will be able to CALL these functions automatically
-# to generate lessons, exercises, and check your answers.
-# For now, they just return placeholder text.
 
 def get_lesson(topic: str) -> str:
-    """
-    PHASE 2 STUB — Fetch a structured lesson on a topic.
-
-    In Phase 2, this will:
-    - Look up a lesson template for the given topic
-    - Possibly fetch examples from a lessons database
-    - Return a formatted lesson with theory + examples
-
-    Example call: get_lesson("for loops")
-    """
-    # TODO Phase 2: Replace with real lesson lookup logic
+    """PHASE 2 STUB — Fetch a structured lesson on a topic."""
     return f"[STUB] Lesson on '{topic}' — Phase 2 will fill this in."
 
 
 def generate_exercise(topic: str, level: str = "beginner") -> dict:
-    """
-    PHASE 2 STUB — Generate a coding exercise for a topic and skill level.
-
-    In Phase 2, this will:
-    - Pick an exercise template matching topic + level
-    - Fill in variables (e.g., different numbers or scenarios each time)
-    - Return the exercise description AND a hidden solution for checking
-
-    Example call: generate_exercise("variables", "beginner")
-    Returns: {"exercise_id": "...", "description": "...", "starter_code": "..."}
-    """
-    # TODO Phase 2: Replace with real exercise generation logic
+    """PHASE 2 STUB — Generate a coding exercise."""
     return {
         "exercise_id": "stub-001",
         "description": f"[STUB] Exercise on '{topic}' at {level} level — Phase 2 will fill this in.",
@@ -189,153 +141,58 @@ def generate_exercise(topic: str, level: str = "beginner") -> dict:
 
 
 def check_answer(code: str, exercise_id: str) -> dict:
-    """
-    PHASE 2 STUB — Check a student's code answer against an exercise.
-
-    In Phase 2, this will:
-    - Safely run the student's code in a sandbox
-    - Compare output/behavior against expected results
-    - Return detailed feedback: what passed, what failed, hints for fixes
-
-    Example call: check_answer("print('hello')", "ex-001")
-    Returns: {"passed": True/False, "feedback": "...", "hints": [...]}
-    """
-    # TODO Phase 2: Replace with real code execution + checking logic
+    """PHASE 2 STUB — Check a student's code answer."""
     return {
         "passed": False,
-        "feedback": f"[STUB] Answer check for exercise '{exercise_id}' — Phase 2 will fill this in.",
+        "feedback": f"[STUB] Answer check for '{exercise_id}' — Phase 2 will fill this in.",
         "hints": ["This is a placeholder hint."],
     }
 
 
-# PHASE 2 TOOL DEFINITIONS
-# These describe the tools to Claude in the format the API expects.
-# When Claude sees these definitions, it can decide to "call" a tool
-# by outputting a special tool_use block instead of plain text.
-TOOLS = [
-    {
-        "name": "get_lesson",
-        "description": "Retrieve a structured lesson on a specific coding topic. Use this when the student asks to learn about a topic from scratch.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "topic": {
-                    "type": "string",
-                    "description": "The coding topic to teach, e.g. 'for loops', 'dictionaries', 'functions'",
-                }
-            },
-            "required": ["topic"],
-        },
-    },
-    {
-        "name": "generate_exercise",
-        "description": "Generate a hands-on coding exercise for a topic at the student's level. Use this when the student wants practice or asks for an exercise.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "topic": {
-                    "type": "string",
-                    "description": "The topic to practice, e.g. 'variables', 'lists'",
-                },
-                "level": {
-                    "type": "string",
-                    "enum": ["beginner", "intermediate", "advanced"],
-                    "description": "The difficulty level for the exercise",
-                },
-            },
-            "required": ["topic"],
-        },
-    },
-    {
-        "name": "check_answer",
-        "description": "Check a student's code answer to an exercise and provide feedback. Use this when the student submits code for evaluation.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "description": "The student's Python code to evaluate",
-                },
-                "exercise_id": {
-                    "type": "string",
-                    "description": "The ID of the exercise being answered",
-                },
-            },
-            "required": ["code", "exercise_id"],
-        },
-    },
-]
-
-
 # ─── CHAT INPUT & RESPONSE ───────────────────────────────────────────────────
-# `st.chat_input` renders the text box at the bottom of the screen.
-# It returns None until the user hits Enter, then returns their message.
 
 if prompt := st.chat_input("Ask Sage anything — what would you like to learn?"):
 
-    # 1. Add the user's message to our conversation history
+    # 1. Add user message to history and display it
     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # 2. Display the user's message immediately (don't wait for the response)
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # 3. Call the Claude API
-    # We send the ENTIRE messages list — that's how Claude "remembers" the chat.
-    # The API is stateless (it forgets everything between calls), so we must
-    # always pass the full history ourselves.
+    # 2. Call the Groq API
+    # Groq uses OpenAI-style messages — system prompt goes as the first message
     with st.chat_message("assistant"):
         with st.spinner("Sage is thinking..."):
-            response = client.messages.create(
-                model="claude-haiku-4-5",   # Fast and affordable model
-                max_tokens=2048,            # Maximum length of Claude's reply
-                system=SYSTEM,             # The cached system prompt (tutor instructions)
-                messages=st.session_state.messages,  # Full conversation history
-                # Phase 2: Uncomment the line below to enable tool use
-                # tools=TOOLS,
+            response = client.chat.completions.create(
+                model=MODEL,
+                max_tokens=2048,
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},  # tutor instructions
+                    *st.session_state.messages,                     # full conversation history
+                ],
             )
 
-        # 4. Extract the text reply from the response
-        # response.content is a list — for plain text, we want the first item's .text
-        reply = response.content[0].text
-
-        # 5. Display the reply
+        # 3. Extract and display the reply
+        reply = response.choices[0].message.content
         st.markdown(reply)
 
-        # 6. Track token usage (visible in the sidebar — see below)
-        usage = response.usage
-        st.session_state.total_input_tokens += usage.input_tokens
-        if hasattr(usage, "cache_read_input_tokens"):
-            st.session_state.total_cache_read_tokens += usage.cache_read_input_tokens
-
-    # 7. Add Claude's reply to history so the next message includes it
+    # 4. Add reply to history
     st.session_state.messages.append({"role": "assistant", "content": reply})
 
 
 # ─── SIDEBAR ─────────────────────────────────────────────────────────────────
-# The sidebar shows stats and controls. It's a great place for "meta" features.
 
 with st.sidebar:
     st.header("Session Info")
 
-    # Show conversation length
     user_msg_count = sum(1 for m in st.session_state.messages if m["role"] == "user")
     st.metric("Messages sent", user_msg_count)
-
-    # Show token usage — this is how you see prompt caching working!
-    # After the first message, "Cache reads" should rise while "Input tokens"
-    # stays roughly the same (the system prompt is being served from cache).
-    st.metric("Total input tokens", st.session_state.total_input_tokens)
-    st.metric("Cache read tokens", st.session_state.total_cache_read_tokens)
+    st.metric("Model", MODEL)
 
     st.divider()
 
-    # Clear conversation button
     if st.button("🗑️ Clear conversation", use_container_width=True):
         st.session_state.messages = []
-        st.session_state.total_input_tokens = 0
-        st.session_state.total_cache_read_tokens = 0
-        st.rerun()  # Re-run the script to refresh the UI
+        st.rerun()
 
     st.divider()
     st.caption("**Phase 2 coming soon:**")
